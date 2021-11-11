@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.snaker.system.mapper.SysUploadListMapper">
+    
+    <resultMap type="SysUploadList" id="UploadListResult">
+        <result property="fileId"    column="file_id"    />
+        <result property="fileName"    column="file_name"    />
+        <result property="fileMd5"    column="file_md5"    />
+        <result property="fileSize"    column="file_size"    />
+        <result property="fileAuth"    column="file_auth"    />
+        <result property="filePath"    column="file_path"    />
+        <result property="uploadTime"    column="upload_time"    />
+        <result property="downloadCount"    column="download_count"    />
+    </resultMap>
+
+    <sql id="selectUploadListVo">
+        select file_id, file_name, file_md5, file_size, file_auth, file_path, upload_time, download_count from t_upload_list
+    </sql>
+
+    <select id="selectUploadList" parameterType="SysUploadList" resultMap="UploadListResult">
+        <include refid="selectUploadListVo"/>
+        <where>  
+            <if test="fileName != null  and fileName != ''"> and file_name like concat('%', #{fileName}, '%')</if>
+            <if test="uploadTime != null"> and TO_DAYS(`upload_time`) = TO_DAYS(#{uploadTime})</if>
+        </where>
+    </select>
+    
+    <select id="selectUploadListById" parameterType="String" resultMap="UploadListResult">
+        <include refid="selectUploadListVo"/>
+        where file_id = #{fileId}
+    </select>
+        
+    <insert id="insertUploadList" parameterType="SysUploadList">
+        insert into t_upload_list
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="fileId != null  and fileId != ''">file_id,</if>
+            <if test="fileName != null  and fileName != ''">file_name,</if>
+            <if test="fileMd5 != null  and fileMd5 != ''">file_md5,</if>
+            <if test="fileSize != null  and fileSize != ''">file_size,</if>
+            <if test="fileAuth != null  and fileAuth != ''">file_auth,</if>
+            <if test="filePath != null  and filePath != ''">file_path,</if>
+            <if test="uploadTime != null ">upload_time,</if>
+            <if test="downloadCount != null ">download_count,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="fileId != null  and fileId != ''">#{fileId},</if>
+            <if test="fileName != null  and fileName != ''">#{fileName},</if>
+            <if test="fileMd5 != null  and fileMd5 != ''">#{fileMd5},</if>
+            <if test="fileSize != null  and fileSize != ''">#{fileSize},</if>
+            <if test="fileAuth != null  and fileAuth != ''">#{fileAuth},</if>
+            <if test="filePath != null  and filePath != ''">#{filePath},</if>
+            <if test="uploadTime != null ">#{uploadTime},</if>
+            <if test="downloadCount != null ">#{downloadCount},</if>
+         </trim>
+    </insert>
+
+    <update id="updateUploadList" parameterType="SysUploadList">
+        update t_upload_list
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="fileName != null  and fileName != ''">file_name = #{fileName},</if>
+            <if test="fileMd5 != null  and fileMd5 != ''">file_md5 = #{fileMd5},</if>
+            <if test="fileSize != null  and fileSize != ''">file_size = #{fileSize},</if>
+            <if test="fileAuth != null  and fileAuth != ''">file_auth = #{fileAuth},</if>
+            <if test="filePath != null  and filePath != ''">file_path = #{filePath},</if>
+            <if test="uploadTime != null ">upload_time = #{uploadTime},</if>
+            <if test="downloadCount != null ">download_count = #{downloadCount},</if>
+        </trim>
+        where file_id = #{fileId}
+    </update>
+
+    <delete id="deleteUploadListById" parameterType="String">
+        delete from t_upload_list where file_id = #{fileId}
+    </delete>
+
+    <delete id="deleteUploadListByIds" parameterType="String">
+        delete from t_upload_list where file_id in 
+        <foreach item="fileId" collection="array" open="(" separator="," close=")">
+            #{fileId}
+        </foreach>
+    </delete>
+    
+</mapper>

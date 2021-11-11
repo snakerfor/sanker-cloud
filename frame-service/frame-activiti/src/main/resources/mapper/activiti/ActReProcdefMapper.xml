@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.snaker.activiti.mapper.ActReProcdefMapper">
+
+    <resultMap type="ActReProcdef" id="ActReProcdefResult">
+        <result property="id"    column="ID_"    />
+        <result property="rev"    column="REV_"    />
+        <result property="category"    column="CATEGORY_"    />
+        <result property="name"    column="NAME_"    />
+        <result property="key"    column="KEY_"    />
+        <result property="version"    column="VERSION_"    />
+        <result property="deploymentId"    column="DEPLOYMENT_ID_"    />
+        <result property="resourceName"    column="RESOURCE_NAME_"    />
+        <result property="dgrmResourceName"    column="DGRM_RESOURCE_NAME_"    />
+        <result property="description"    column="DESCRIPTION_"    />
+        <result property="hasStartFormKey"    column="HAS_START_FORM_KEY_"    />
+        <result property="hasGraphicalNotation"    column="HAS_GRAPHICAL_NOTATION_"    />
+        <result property="suspensionState"    column="SUSPENSION_STATE_"    />
+        <result property="tenantId"    column="TENANT_ID_"    />
+    </resultMap>
+
+    <sql id="selectActReProcdefVo">
+        select ID_, REV_, CATEGORY_, NAME_, KEY_, VERSION_, DEPLOYMENT_ID_, RESOURCE_NAME_, DGRM_RESOURCE_NAME_, DESCRIPTION_, HAS_START_FORM_KEY_, HAS_GRAPHICAL_NOTATION_, SUSPENSION_STATE_, TENANT_ID_ from act_re_procdef
+    </sql>
+
+    <select id="selectActReProcdefList" parameterType="ActReProcdef" resultMap="ActReProcdefResult">
+        <include refid="selectActReProcdefVo"/>
+        <where>
+            <if test="id != null and id != ''"> and ID_ = #{id}</if>
+            <if test="rev != null "> and REV_ = #{rev}</if>
+            <if test="category != null  and category != ''"> and CATEGORY_ = #{category}</if>
+            <if test="name != null  and name != ''"> and NAME_ = #{name}</if>
+            <if test="key != null  and key != ''"> and KEY_ = #{key}</if>
+            <if test="version != null "> and VERSION_ = #{version}</if>
+            <if test="deploymentId != null  and deploymentId != ''"> and DEPLOYMENT_ID_ = #{deploymentId}</if>
+            <if test="resourceName != null  and resourceName != ''"> and RESOURCE_NAME_ = #{resourceName}</if>
+            <if test="dgrmResourceName != null  and dgrmResourceName != ''"> and DGRM_RESOURCE_NAME_ = #{dgrmResourceName}</if>
+            <if test="description != null  and description != ''"> and DESCRIPTION_ = #{description}</if>
+            <if test="hasStartFormKey != null "> and HAS_START_FORM_KEY_ = #{hasStartFormKey}</if>
+            <if test="hasGraphicalNotation != null "> and HAS_GRAPHICAL_NOTATION_ = #{hasGraphicalNotation}</if>
+            <if test="suspensionState != null "> and SUSPENSION_STATE_ = #{suspensionState}</if>
+            <if test="tenantId != null  and tenantId != ''"> and TENANT_ID_ = #{tenantId}</if>
+        </where>
+    </select>
+</mapper>

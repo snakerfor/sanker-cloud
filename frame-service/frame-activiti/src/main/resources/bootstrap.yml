@@ -1,0 +1,79 @@
+server:
+  port: 8004
+# 日志配置
+logging:
+  level:
+    com.snaker: debug
+    org.springframework: warn
+    com.alibaba.nacos.client.naming: error
+
+spring:
+  application:
+    name: frame-activiti
+  profiles:
+    active: dev
+  devtools:
+    restart:
+      enabled: true
+  main:
+    allow-bean-definition-overriding: true
+  # 模板引擎
+  thymeleaf:
+    mode: HTML
+    encoding: utf-8
+    # 禁用缓存
+    cache: false
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+  cloud:
+    nacos:
+      discovery:
+        server-addr: 192.168.204.111:8848
+        group: dangmang
+      config:
+        server-addr: 192.168.204.111:8848
+        file-extension: yml
+  activiti:
+    check-process-definitions: false
+
+
+feign:
+  hystrix:
+    enabled: true
+
+hystrix:
+  command:
+    default:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 60000
+    ###配置具体方法超时时间
+    serverMethod:
+      execution:
+        isolation:
+          thread:
+            timeoutInMilliseconds: 60000
+
+ribbon:
+  ReadTimeout: 60000
+  ConnectTimeout: 60000
+
+# MyBatis
+mybatis:
+  # 搜索指定包别名
+  typeAliasesPackage: com.snaker
+  # 配置mapper的扫描，找到所有的mapper.xml映射文件
+  mapperLocations: classpath*:mapper/**/*Mapper.xml
+
+mapper:
+  not-empty: true
+  identity: MYSQL
+
+# PageHelper分页插件
+pagehelper:
+  helperDialect: mysql
+  reasonable: true
+  supportMethodsArguments: true
+  params: count=countSql

@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.snaker.activiti.mapper.BizAuditMapper">
+    
+    <resultMap type="BizAudit" id="BizAuditResult">
+        <result property="id"    column="id"    />
+        <result property="taskId"    column="task_id"    />
+        <result property="result"    column="result"    />
+        <result property="comment"    column="comment"    />
+        <result property="procName"    column="proc_name"    />
+        <result property="procDefKey"    column="proc_def_key"    />
+        <result property="applyer"    column="applyer"    />
+        <result property="auditor"    column="auditor"    />
+        <result property="auditorId"    column="auditor_id"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <sql id="selectBizAuditVo">
+        select id, task_id, result, comment, proc_name, proc_def_key, applyer, auditor, auditor_id, create_time, del_flag from biz_audit
+    </sql>
+
+    <select id="selectBizAuditList" parameterType="BizAudit" resultMap="BizAuditResult">
+        <include refid="selectBizAuditVo"/>
+        <where>  
+            <if test="taskId != null  and taskId != ''"> and task_id = #{taskId}</if>
+            <if test="result != null "> and result = #{result}</if>
+            <if test="comment != null  and comment != ''"> and comment = #{comment}</if>
+            <if test="procName != null  and procName != ''"> and proc_name like ('%'+ #{procName}+ '%')</if>
+            <if test="procDefKey != null  and procDefKey != ''"> and proc_def_key = #{procDefKey}</if>
+            <if test="applyer != null  and applyer != ''"> and applyer = #{applyer}</if>
+            <if test="auditor != null  and auditor != ''"> and auditor = #{auditor}</if>
+            <if test="auditorId != null "> and auditor_id = #{auditorId}</if>
+        </where>
+    </select>
+    
+    <select id="selectBizAuditById" parameterType="String" resultMap="BizAuditResult">
+        <include refid="selectBizAuditVo"/>
+        where id = #{id}
+    </select>
+        
+    <insert id="insertBizAudit" parameterType="BizAudit">
+        <selectKey keyProperty="id" resultType="java.lang.String" order="BEFORE">
+            select replace(uuid(), '-', '') as id
+        </selectKey>
+        insert into biz_audit
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null  and id != ''">id,</if>
+            <if test="taskId != null  and taskId != ''">task_id,</if>
+            <if test="result != null ">result,</if>
+            <if test="comment != null  and comment != ''">comment,</if>
+            <if test="procName != null  and procName != ''">proc_name,</if>
+            <if test="procDefKey != null  and procDefKey != ''">proc_def_key,</if>
+            <if test="applyer != null  and applyer != ''">applyer,</if>
+            <if test="auditor != null  and auditor != ''">auditor,</if>
+            <if test="auditorId != null ">auditor_id,</if>
+            <if test="createTime != null ">create_time,</if>
+            <if test="delFlag != null  and delFlag != ''">del_flag,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null  and id != ''">#{id},</if>
+            <if test="taskId != null  and taskId != ''">#{taskId},</if>
+            <if test="result != null ">#{result},</if>
+            <if test="comment != null  and comment != ''">#{comment},</if>
+            <if test="procName != null  and procName != ''">#{procName},</if>
+            <if test="procDefKey != null  and procDefKey != ''">#{procDefKey},</if>
+            <if test="applyer != null  and applyer != ''">#{applyer},</if>
+            <if test="auditor != null  and auditor != ''">#{auditor},</if>
+            <if test="auditorId != null ">#{auditorId},</if>
+            <if test="createTime != null ">#{createTime},</if>
+            <if test="delFlag != null  and delFlag != ''">#{delFlag},</if>
+         </trim>
+    </insert>
+
+    <update id="updateBizAudit" parameterType="BizAudit">
+        update biz_audit
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="taskId != null  and taskId != ''">task_id = #{taskId},</if>
+            <if test="result != null ">result = #{result},</if>
+            <if test="comment != null  and comment != ''">comment = #{comment},</if>
+            <if test="procName != null  and procName != ''">proc_name = #{procName},</if>
+            <if test="procDefKey != null  and procDefKey != ''">proc_def_key = #{procDefKey},</if>
+            <if test="applyer != null  and applyer != ''">applyer = #{applyer},</if>
+            <if test="auditor != null  and auditor != ''">auditor = #{auditor},</if>
+            <if test="auditorId != null ">auditor_id = #{auditorId},</if>
+            <if test="createTime != null ">create_time = #{createTime},</if>
+            <if test="delFlag != null  and delFlag != ''">del_flag = #{delFlag},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteBizAuditById" parameterType="String">
+        delete from biz_audit where id = #{id}
+    </delete>
+
+    <delete id="deleteBizAuditByIds" parameterType="String">
+        delete from biz_audit where id in 
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <resultMap type="com.snaker.activiti.vo.HiTaskVo" id="HiTaskVoResult">
+        <result property="id"    column="id"    />
+        <result property="procDefId"    column="proc_def_id"    />
+        <result property="procInstId"    column="proc_inst_id"    />
+        <result property="taskDefKey"    column="task_def_key"    />
+        <result property="taskName"    column="task_name"    />
+        <result property="auditorId"    column="auditor_id"    />
+        <result property="auditor"    column="auditor"    />
+        <result property="deleteReason"    column="delete_reason"    />
+        <result property="startTime"    column="start_time"    />
+        <result property="endTime"    column="end_time"    />
+        <result property="duration"    column="duration"    />
+        <result property="auditId"    column="audit_id"    />
+        <result property="result"    column="result"    />
+        <result property="comment"    column="comment"    />
+        <result property="procDefKey"    column="proc_def_key"    />
+        <result property="procName"    column="proc_name"    />
+        <result property="applyer"    column="applyer"    />
+        <result property="title"    column="title"    />
+        <result property="businessKey"    column="business_key"    />
+        <result property="startUserId"    column="start_user_id"    />
+        <result property="delFlag"    column="del_flag"    />
+    </resultMap>
+
+    <select id="getHistoryTaskList" resultMap="HiTaskVoResult">
+        SELECT
+        ht.ID_ AS id,
+        ht.PROC_DEF_ID_ AS proc_def_id,
+        ht.PROC_INST_ID_ AS proc_inst_id,
+        ht.TASK_DEF_KEY_ AS task_def_key,
+        ht.NAME_ AS task_name,
+        ht.START_TIME_ AS start_time,
+        ht.END_TIME_ AS end_time,
+        ht.DURATION_ AS duration,
+        ht.DELETE_REASON_ AS delete_reason,
+        ba.id as audit_id,
+        ba.result,
+        ba.comment,
+        ba.proc_def_key,
+        ba.proc_name,
+        ba.applyer,
+        ba.auditor,
+        ba.auditor_id,
+        ba.del_flag,
+        hp.BUSINESS_KEY_ AS business_key,
+        hp.NAME_ AS title,
+        hp.START_USER_ID_ AS start_user_id
+        FROM
+        act_hi_taskinst ht
+        LEFT JOIN biz_audit ba ON ht.ID_ = ba.task_id
+        LEFT JOIN act_hi_procinst hp ON ht.PROC_INST_ID_ = hp.ID_
+        <where>
+            <if test="deleteReason !=null and deleteReason !=''"> and ht.DELETE_REASON_ =#{deleteReason}</if>
+            <if test="auditorId !=null"> and ba.auditor_id =#{auditorId} </if>
+            <if test="taskName !=null and taskName !=''"> and ht.NAME_ like ('%'+ #{taskName}+ '%')</if>
+            <if test="delFlag !=null"> and ba.del_flag =#{delFlag}</if>
+            <if test="procInstId !=null and procInstId !=''"> and ht.PROC_INST_ID_ =#{procInstId}</if>
+        </where>
+        order by ht.START_TIME_ desc
+    </select>
+
+    <update id="deleteLogic">
+        update biz_audit set del_flag=true where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+</mapper>

@@ -1,0 +1,297 @@
+<template>
+  <a-card :bordered="false">
+    <div class="table-page-search-wrapper">
+       <a-form class="ant-advanced-search-form">
+         <a-row type="flex" justify="space-between" :gutter="16" align="middle">
+#foreach($column in $columns)
+#if($column.query)
+#set($dictType=$column.dictType)
+#set($AttrName=$column.javaField.substring(0,1).toUpperCase() + ${column.javaField.substring(1)})
+#set($parentheseIndex=$column.columnComment.indexOf("（"))
+#if($parentheseIndex != -1)
+#set($comment=$column.columnComment.substring(0, $parentheseIndex))
+#else  
+#set($comment=$column.columnComment)
+#end  
+#if($column.htmlType == "input")
+          <a-col :md="6" :sm="15">
+            <a-form-item label="${comment}" :labelCol="labelCol" :wrapperCol="wrapperCol">
+                <a-input placeholder="请输入${comment}" v-model="queryParam.${column.javaField}"/>
+            </a-form-item>
+          </a-col>
+#elseif($column.htmlType == "select")
+          <a-col :md="6" :sm="15">
+            <a-form-item label="${comment}" :labelCol="labelCol" :wrapperCol="wrapperCol">
+              <a-select placeholder="请选择${comment}" v-model="queryParam.${column.javaField}" >
+                <a-select-option value="">全部</a-select-option>
+                  <a-select-option v-for="(d, index) in ${column.javaField}Array" :key="index" :value="d.dictValue">
+                      {{ d.dictLabel }}
+                  </a-select-option>
+              </a-select>
+            </a-form-item>
+          </a-col>
+#elseif($column.htmlType == "datetime")
+          <a-col :md="6" :sm="15">
+            <a-form-item label="${comment}" :labelCol="labelCol" :wrapperCol="wrapperCol">
+                <a-range-picker v-model="range"/>
+            </a-form-item>
+          </a-col>
+#else
+#end
+#end
+#end	
+          <a-col :md="6" :sm="24">
+            <span class="table-page-search-submitButtons">
+              <a-button type="primary" @click="tablefresh">查询</a-button>
+              <a-button style="margin-left: 8px" @click="() => queryParam = {}">重置</a-button>
+              <a @click="toggleAdvanced" style="margin-left: 8px">
+                {{ advanced ? '收起' : '展开' }}
+                <a-icon :type="advanced ? 'up' : 'down'" />
+              </a>
+            </span>
+          </a-col>
+        </a-row>
+      </a-form>
+    </div>
+    <a-row type="flex" justify="space-between" align="middle">
+      <a-col>
+        <div class="table-operator">
+          <a-button v-if="addEnable" type="primary" icon="plus" @click="$refs.modal.add()">添加${functionName}</a-button>
+          <a-button v-if="importEnable" type="primary" icon="import" @click="batchImport">批量导入</a-button>
+          <a-button v-if="exportEnable" type="primary" icon="export" @click="exportExcel()">批量导出</a-button>
+          <a-dropdown v-if="removeEnable&&selectedRowKeys.length > 0">
+            <a-button type="danger" icon="delete" @click="delByIds(selectedRowKeys)">批量删除</a-button>
+          </a-dropdown>
+        </div>
+      </a-col>
+      <a-col>
+          <column-setting :hiddenColumn="hiddenColumn" :columns="columns" @ok="handleColmunSetting"></column-setting>
+      </a-col>
+    </a-row>
+    <div style="height:500px">
+        <s-table size="small" :locale="locale" ref="table" rowKey="id" :rowSelection="{selectedRowKeys: selectedRowKeys, onChange: onSelectChange}" :columns="columns" :data="loadData"
+               :defaultSort="sortField" :scroll="{ x: 200,y:500 }" :bordered="true" :showPagination="showPagination" :pagination="pagination" :customRow="rowClick">
+###foreach($column in $columns)
+###if($column.dataSource == "dict" || $column.dataSource == "map" )
+##          <span slot="${column.javaField}" slot-scope="text">
+##            {{ text | ${column.javaField}Filter}}
+##          </span>
+###end
+###end
+        </s-table>
+    </div>
+    <${className}-modal ref="modal"  :shareData="shareData"  @ok="handleOk"/>
+    <import-excel-by-dir-modal ref="importModal" @ok="handleOk" :businessUploadUrl="importUrl" :businessDownloadPath="templatePath" />
+
+  </a-card>
+</template>
+
+<script>
+import { STable } from '@/components'
+import { get${ClassName}List, del${ClassName}, ${className}Export, ${className}Import } from '@/api/${moduleName}/${className}'
+import ${ClassName}Modal from './modules/${ClassName}Modal.vue'
+import ImportExcelByDirModal from '@/views/common/ImportExcelByDirModal.vue'
+import { checkPermission } from '@/utils/permissions'
+import { exportExcel } from '@/utils/download'
+import ColumnSetting from '@/views/common/ColumnSetting.vue'
+import { getDictArray } from '@/utils/dict'
+export default {
+  name: 'TableList',
+  components: {
+    STable,
+    ${ClassName}Modal,
+    ColumnSetting,
+    ImportExcelByDirModal
+  },
+  data () {
+    return {
+      loadingmask: false,
+      locale: {
+        emptyText: '暂无数据'
+      },
+      labelCol: {
+        xs: { span: 24 },
+        sm: { span: 9 }
+      },
+      wrapperCol: {
+        xs: { span: 24 },
+        sm: { span: 15 }
+      },
+      form: this.$form.createForm(this),
+      mdl: {},
+      // 高级搜索 展开/关闭
+      advanced: false,
+      // 查询参数
+      queryParam: {},
+      // 表头
+      columns: [
+#foreach($column in $columns)
+#set($dictType=$column.dictType)
+#set($javaField=$column.javaField)
+#set($parentheseIndex=$column.columnComment.indexOf("（"))
+#if($parentheseIndex != -1)
+#set($comment=$column.columnComment.substring(0, $parentheseIndex))
+#else
+#set($comment=$column.columnComment)
+#end
+#if($column.isList)
+        {
+            title: '${comment}',
+            dataIndex: '${javaField}',
+#if($column.dataSource == "dict" || $column.dataSource == "map" )
+            ## scopedSlots: { customRender: '${column.javaField}' },
+            customRender: (text) => this.dictRender(text, '${column.columnName}'),
+#end
+#if($column.htmlType == "datetime")
+            sorter: true,
+#end
+            align: 'left'
+        },
+#end
+#end
+      ],
+      // 加载数据方法 必须为 Promise 对象
+      loadData: parameter => {
+        var p = new Promise(function (resolve, reject) {
+            resolve({ pageNum: 1, rows: [], tatol: 0 })
+        })
+        return p
+      },
+      // 是否首次加载表格
+      first: true,
+      showPagination: true,
+      pagination: {
+        hideOnSinglePage: false,
+        showSizeChanger: true,
+        pageSizeOptions: ['10', '20', '50', '100'],
+        showTotal: total => `共有 ${total} 条数据`
+      },
+      // 路径
+      templatePath: 'template/${functionName}导入模板.xlsx',
+      importUrl: ${className}Import,
+      // 隐藏列
+      hiddenColumn: [],
+      selectedRowKeys: [],
+      selectedRows: [],
+      addEnable: checkPermission('${moduleName}:${className}:add'),
+      editEnable: checkPermission('${moduleName}:${className}:edit'),
+      removeEnable: checkPermission('${moduleName}:${className}:remove'),
+      exportEnable: checkPermission('${moduleName}:${className}:export'),
+      importEnable: checkPermission('${moduleName}:${className}:import'),
+#foreach($column in $columns)
+#if($column.dataSource == "dict")
+      ${column.javaField}Array: [],
+      ${column.javaField}Map: {},
+#end
+#if($column.dataSource == "map" )
+      ${column.javaField}Array: [
+#set($kvList=${column.dictType.split(',')})
+#foreach($kv in $kvList)
+        { dictValue: '${kv.split('=')[0]}', dictLabel: '${kv.split('=')[1]}' }#if($foreach.hasNext),#end
+#end
+],
+      ${column.javaField}Map: {},
+#end
+#end
+      // 共享数据
+      shareData: {}
+    }
+  },
+  filters: {
+  },
+  async created () {
+#foreach($column in $columns)
+#if($column.isList && $column.dataSource)
+#if($column.dataSource == "dict")
+    this.${column.javaField}Array = await getDictArray('${column.dictType}')
+#end
+    this.${column.javaField}Array.forEach(e => {
+            this.${column.javaField}Map[e.dictValue] = e.dictLabel
+    })
+    this.shareData['${column.columnName}_array'] = this.${column.javaField}Array
+    this.shareData['${column.columnName}_map'] = this.${column.javaField}Map
+#end
+#end
+  },
+  mounted () {
+    const that = this
+    document.onkeydown = function (e) {
+        const key = window.event.keyCode
+        if (key === 13) {
+            that.$refs.table.refresh(false)
+        }
+    }
+  },
+  methods: {
+    dictRender (text, type) {
+      return this.shareData[type + '_map'][text]
+    },
+    rowClick (record, index) {
+      return {
+          on: {
+            dblclick: () => {
+              if (this.editEnable) {
+                this.handleEdit(record)
+              } else {
+                this.handleView(record)
+              }
+            }
+          }
+       }
+    },
+    tablefresh () {
+      if (this.first) {
+          this.loadData = parameter => {
+              return get${ClassName}List(Object.assign(parameter, this.queryParam))
+          }
+          this.$nextTick(() => {
+              this.$refs.table.refresh(false)
+              this.first = false
+          })
+      } else {
+          this.$refs.table.refresh(true)
+      }
+    },
+    toggleAdvanced () {
+      this.advanced = !this.advanced
+    },
+    onSelectChange (selectedRowKeys, selectedRows) {
+      this.selectedRowKeys = selectedRowKeys
+      this.selectedRows = selectedRows
+    },
+    handleAdd () {
+      this.$refs.modal.add()
+    },
+    handleEdit (record) {
+      this.$refs.modal.edit(record)
+    },
+    handleOk () {
+      this.$refs.table.refresh(true)
+      console.log('handleSaveOk')
+    },
+#set($foo="$")
+    delByIds (ids) {
+      del${ClassName}({ ids: ids.join(',') }).then(res => {
+        if (res.code === 0) {
+          this.${foo}message.success('删除成功')
+          this.handleOk()
+        } else {
+          this.${foo}message.error(res.msg)
+        }
+        this.selectedRowKeys = []
+      })
+    },
+    // 处理栏位配置
+    handleColmunSetting (cols) {
+      this.columns = cols
+    },
+    exportExcel () {
+      exportExcel(${className}Export, this.queryParam)
+    },
+    // 批量导入
+    batchImport () {
+      this.$refs.importModal.show()
+    }
+  }
+}
+</script>

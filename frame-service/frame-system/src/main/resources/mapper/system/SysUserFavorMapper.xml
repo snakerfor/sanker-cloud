@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+"http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.snaker.system.mapper.SysUserFavorMapper">
+
+    <resultMap type="SysUserFavor" id="SysUserFavorResult">
+        <result property="id"    column="id"    />
+        <result property="userId"    column="user_id"    />
+        <result property="routerPath"    column="router_path"    />
+        <result property="type"    column="type"    />
+        <result property="record"    column="record"    />
+        <result property="createTime"    column="create_time"    />
+        <result property="updateTime"    column="update_time"    />
+    </resultMap>
+
+    <sql id="selectSysUserFavorVo">
+        select id, user_id, router_path, type, record, create_time, update_time from sys_user_favor
+    </sql>
+
+    <select id="selectSysUserFavorList" parameterType="SysUserFavor" resultMap="SysUserFavorResult">
+        <include refid="selectSysUserFavorVo"/>
+        <where>
+            <if test="userId != null "> and user_id = #{userId}</if>
+            <if test="routerPath != null  and routerPath != ''"> and router_path = #{routerPath} </if>
+            <if test="type != null  and type != ''"> and type = #{type}</if>
+        </where>
+    </select>
+
+    <select id="selectSysUserFavorById" parameterType="String" resultMap="SysUserFavorResult">
+        <include refid="selectSysUserFavorVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertSysUserFavor" parameterType="SysUserFavor">
+        <selectKey keyProperty="id" resultType="java.lang.String" order="BEFORE">
+            select replace(uuid(), '-', '') as id
+        </selectKey>
+        insert into sys_user_favor
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null  and id != ''">id,</if>
+            <if test="userId != null ">user_id,</if>
+            <if test="routerPath != null  and routerPath != ''">router_path,</if>
+            <if test="type != null  and type != ''">type,</if>
+            <if test="record != null  and record != ''">record,</if>
+            <if test="createTime != null ">create_time,</if>
+            <if test="updateTime != null ">update_time,</if>
+         </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null  and id != ''">#{id},</if>
+            <if test="userId != null ">#{userId},</if>
+            <if test="routerPath != null  and routerPath != ''">#{routerPath},</if>
+            <if test="type != null  and type != ''">#{type},</if>
+            <if test="record != null  and record != ''">#{record},</if>
+            now(),
+            now()
+         </trim>
+    </insert>
+
+    <update id="updateSysUserFavor" parameterType="SysUserFavor">
+        update sys_user_favor
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="userId != null ">user_id = #{userId},</if>
+            <if test="routerPath != null  and routerPath != ''">router_path = #{routerPath},</if>
+            <if test="type != null  and type != ''">type = #{type},</if>
+            <if test="record != null  and record != ''">record = #{record},</if>
+            <if test="updateTime != null ">update_time = now(),</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteSysUserFavorById" parameterType="String">
+        delete from sys_user_favor where id = #{id}
+    </delete>
+
+    <delete id="deleteSysUserFavorByIds" parameterType="String">
+        delete from sys_user_favor where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

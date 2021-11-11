@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.snaker.dfs.mapper.DfsFileMapper">
+
+    <resultMap type="DfsFile" id="DfsFileResult">
+        <id property="id" column="id"/>
+        <result property="fileName" column="file_name"/>
+        <result property="fileSuffix" column="file_suffix"/>
+        <result property="url" column="url"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="deleteFlag" column="delete_flag"/>
+        <result property="versionNum" column="version_num"/>
+        <result property="md5" column="md5"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectDfsFileVo">
+SELECT id,file_name,file_suffix,url,create_by,create_time,delete_flag,update_by,update_time,version_num,md5 FROM dbo.dfs_file    </sql>
+
+    <select id="selectDfsFileList" parameterType="DfsFile" resultMap="DfsFileResult">
+        <include refid="selectDfsFileVo"/>
+        <where>
+            <if test="fileName != null and fileName != ''">
+                AND file_name like ('%'+ #{fileName}+ '%')
+            </if>
+            <if test="fileSuffix != null and fileSuffix != ''">
+                AND file_suffix = #{fileName}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectDfsFileById" parameterType="String" resultMap="DfsFileResult">
+        <include refid="selectDfsFileVo"/>
+        where delete_flag != '1' and id = #{id}
+    </select>
+
+    <select id="selectDfsFileListByIds" parameterType="String" resultMap="DfsFileResult">
+        <include refid="selectDfsFileVo"/>
+        where delete_flag != '1' and id in
+        <foreach collection="array" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </select>
+
+    <insert id="insertDfsFile" parameterType="DfsFile">
+        insert into dfs_file (
+            <if test="id != null and id != ''">id,</if>
+            <if test="fileName != null and fileName != ''">file_name,</if>
+            <if test="fileSuffix != null and fileSuffix != ''">file_suffix,</if>
+            <if test="url != null and url != ''">url,</if>
+            <if test="deleteFlag != null and deleteFlag != ''">delete_flag,</if>
+            <if test="createBy != null and createBy != ''">create_by,</if>
+        <if test="updateBy != null and updateBy != ''">update_by,</if>
+        <if test="updateTime != null ">update_time,</if>
+        <if test="md5 != null and md5 != ''">md5,</if>
+        <if test="versionNum != null ">version_num,</if>
+            create_time
+        )values(
+            <if test="id != null and id != ''">#{id},</if>
+            <if test="fileName != null and fileName != ''">#{fileName},</if>
+            <if test="fileSuffix != null and fileSuffix != ''">#{fileSuffix},</if>
+            <if test="url != null and url != ''">#{url},</if>
+            <if test="deleteFlag != null and deleteFlag != ''">#{deleteFlag},</if>
+            <if test="createBy != null and createBy != ''">#{createBy},</if>
+        <if test="updateBy != null and updateBy != ''">#{updateBy},</if>
+        <if test="updateTime != null ">#{updateTime},</if>
+        <if test="md5 != null and md5 != ''">#{md5},</if>
+        <if test="versionNum != null ">#{versionNum},</if>
+            now()
+        )
+    </insert>
+
+    <insert id="insertZipDfsFile" parameterType="com.snaker.dfs.domain.ZipDfsFile">
+        insert into zip_dfs_file (
+            <if test="id != null">id,</if>
+            <if test="dirDataStr != null ">dir_data_str,</if>
+            record_time
+        )values(
+            <if test="id != null ">#{id},</if>
+            <if test="dirDataStr != null ">#{dirDataStr},</if>
+            now()
+        )
+    </insert>
+
+    <update id="updateDfsFile" parameterType="DfsFile">
+        update dfs_File
+        <set>
+            <if test="id != null and id != ''">id = #{id},</if>
+            <if test="fileName != null and fileName != ''">file_name = #{fileName},</if>
+            <if test="fileSuffix != null and fileSuffix != ''">file_suffix = #{fileSuffix},</if>
+            <if test="url != null and url != ''">url = #{url},</if>
+            <if test="deleteFlag != null and deleteFlag != ''">delete_flag = #{deleteFlag},</if>
+            <if test="updateBy != null and updateBy != ''">update_by= #{updateBy},</if>
+            <if test="updateTime != null ">update_time=#{updateTime},</if>
+            <if test="md5 != null and md5 != ''">md5=#{md5},</if>
+            <if test="versionNum != null ">version_num=#{versionNum},</if>
+        </set>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteDfsFileByIds" parameterType="String">
+        delete from dfs_File where id in
+        <foreach collection="array" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <update id="batchUpdateDfsFileDelFlagByOldDelFlags" parameterType="com.snaker.dfs.domain.DfsFile">
+        update dfs_file
+            set delete_flag = #{newDelFlagOpt}
+        where
+            id in
+        <foreach collection="queryIds" open="(" separator="," close=")" item="val">'${val}'</foreach>
+            and
+        delete_flag in
+        <foreach collection="oldDelFlagsOpt" open="(" separator="," close=")" item="val">'${val}'</foreach>
+    </update>
+
+
+    <select id="selectZipDfsFileById" parameterType="String" resultType="com.snaker.dfs.domain.ZipDfsFile">
+        select
+            zdf.id id,
+            zdf.dir_data_str dirDataStr,
+            zdf.record_time recordTime
+        from zip_dfs_file zdf
+        where
+            zdf.id = #{id}
+    </select>
+
+
+
+</mapper>

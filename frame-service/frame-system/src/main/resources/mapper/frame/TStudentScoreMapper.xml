@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.snaker.frame.mapper.TStudentScoreMapper">
+
+    <resultMap type="TStudentScore" id="TStudentScoreResult">
+        <result property="id" column="id"/>
+        <result property="studentNo" column="student_no"/>
+        <result property="studentName" column="student_name"/>
+        <result property="score" column="score"/>
+        <result property="subjectCode" column="subject_code"/>
+        <result property="examDate" column="exam_date"/>
+        <result property="delFlag" column="del_flag"/>
+        <result property="createBy" column="create_by"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateBy" column="update_by"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="selectTStudentScoreVo">
+        select id, student_no, student_name, score, subject_code, exam_date, del_flag, create_by, create_time, update_by, update_time from t_student_score
+    </sql>
+
+    <select id="selectTStudentScoreList" parameterType="TStudentScore" resultMap="TStudentScoreResult">
+        <include refid="selectTStudentScoreVo"/>
+        <where>
+            <if test="studentName != null  and studentName != ''">
+                and student_name like concat('%',#{studentName},'%')
+            </if>
+            <if test="studentNo != null  and studentNo != ''">
+                and student_no = #{studentNo}
+            </if>
+            <if test="subjectCode != null  and subjectCode != ''">
+                and subject_code = #{subjectCode}
+            </if>
+        </where>
+    </select>
+
+    <select id="selectTStudentScoreById" parameterType="String" resultMap="TStudentScoreResult">
+        <include refid="selectTStudentScoreVo"/>
+        where id = #{id}
+    </select>
+
+    <insert id="insertTStudentScore" parameterType="TStudentScore">
+        <selectKey keyProperty="id" resultType="java.lang.String" order="BEFORE">
+            select replace(uuid(), '-', '') as id
+        </selectKey>
+        insert into t_student_score
+        <trim prefix="(" suffix=")" suffixOverrides=",">
+            <if test="id != null  and id != ''">id,</if>
+            <if test="studentNo != null  and studentNo != ''">student_no,</if>
+            <if test="studentName != null  and studentName != ''">student_name,</if>
+            <if test="score != null ">score,</if>
+            <if test="subjectCode != null  and subjectCode != ''">subject_code,</if>
+            <if test="examDate != null ">exam_date,</if>
+            <if test="delFlag != null  and delFlag != ''">del_flag,</if>
+            <if test="createBy != null ">create_by,</if>
+            <if test="createTime != null ">create_time,</if>
+            <if test="updateBy != null ">update_by,</if>
+            <if test="updateTime != null ">update_time,</if>
+        </trim>
+        <trim prefix="values (" suffix=")" suffixOverrides=",">
+            <if test="id != null  and id != ''">#{id},</if>
+            <if test="studentNo != null  and studentNo != ''">#{studentNo},</if>
+            <if test="studentName != null  and studentName != ''">#{studentName},</if>
+            <if test="score != null ">#{score},</if>
+            <if test="subjectCode != null  and subjectCode != ''">#{subjectCode},</if>
+            <if test="examDate != null ">#{examDate},</if>
+            <if test="delFlag != null  and delFlag != ''">#{delFlag},</if>
+            <if test="createBy != null ">#{createBy},</if>
+            <if test="createTime != null ">#{createTime},</if>
+            <if test="updateBy != null ">#{updateBy},</if>
+            <if test="updateTime != null ">#{updateTime},</if>
+        </trim>
+    </insert>
+
+    <update id="updateTStudentScore" parameterType="TStudentScore">
+        update t_student_score
+        <trim prefix="SET" suffixOverrides=",">
+            <if test="studentNo != null  and studentNo != ''">student_no = #{studentNo},</if>
+            <if test="studentName != null  and studentName != ''">student_name = #{studentName},</if>
+            <if test="score != null ">score = #{score},</if>
+            <if test="subjectCode != null  and subjectCode != ''">subject_code = #{subjectCode},</if>
+            <if test="examDate != null ">exam_date = #{examDate},</if>
+            <if test="delFlag != null  and delFlag != ''">del_flag = #{delFlag},</if>
+            <if test="createBy != null ">create_by = #{createBy},</if>
+            <if test="createTime != null ">create_time = #{createTime},</if>
+            <if test="updateBy != null ">update_by = #{updateBy},</if>
+            <if test="updateTime != null ">update_time = #{updateTime},</if>
+        </trim>
+        where id = #{id}
+    </update>
+
+    <update id="updateTStudentScoreForForm" parameterType="TStudentScore">
+        update t_student_score
+        <trim prefix="SET" suffixOverrides=",">
+            student_no = #{studentNo},
+            student_name = #{studentName},
+            score = #{score},
+            subject_code = #{subjectCode},
+            exam_date = #{examDate},
+            del_flag = #{delFlag},
+            create_by = #{createBy},
+            create_time = #{createTime},
+            update_by = #{updateBy},
+            update_time = #{updateTime},
+        </trim>
+        where id = #{id}
+    </update>
+
+    <delete id="deleteTStudentScoreById" parameterType="String">
+        delete from t_student_score where id = #{id}
+    </delete>
+
+    <delete id="deleteTStudentScoreByIds" parameterType="String">
+        delete from t_student_score where id in
+        <foreach item="id" collection="array" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <!-- 批量插入 -->
+    <insert id="insertTStudentScoreList" parameterType="java.util.List">
+        insert into t_student_score
+        (id,student_no,student_name,score,subject_code,exam_date,del_flag,create_by,create_time,update_by,update_time)
+        values
+        <foreach collection="list" item="item" index="index" separator=",">
+            ((select replace(uuid(), '-', '') as
+            id),#{item.studentNo},#{item.studentName},#{item.score},#{item.subjectCode},#{item.examDate},#{item.delFlag},#{item.createBy},#{item.createTime},#{item.updateBy},#{item.updateTime}
+            )
+        </foreach>
+    </insert>
+
+
+</mapper>

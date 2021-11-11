@@ -1,0 +1,339 @@
+package ${packageName}.controller;
+
+import com.snaker.common.core.domain.RootEntity;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import cn.hutool.core.io.FileUtil;
+import com.snaker.common.redis.util.RedisUtils;
+import com.snaker.common.utils.StringUtils;
+import com.snaker.common.utils.poi.ExcelUtil;
+import com.snaker.dfs.feign.RemoteFtpService;
+import java.net.URLEncoder;
+import java.util.Date;
+import java.util.List;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.net.URLEncoder;
+import java.util.*;
+import javax.servlet.http.HttpServletRequest;
+import static org.jsoup.helper.StringUtil.isNumeric;
+
+import com.snaker.common.core.domain.R;
+import com.snaker.common.core.controller.BaseController;
+import ${packageName}.domain.${ClassName};
+import ${packageName}.service.I${ClassName}Service;
+#set($hasDict="0")
+#foreach($column in $columns)
+#if($column.dataSource == "dict")
+#set($hasDict="1")
+#break;
+#end
+#end
+#if($hasDict == "1")
+import com.snaker.system.service.ISysDictDataService;
+#end
+
+/**
+ * ${functionName} 提供者
+ * 
+ * @author ${author}
+ * @date ${datetime}
+ */
+@RestController
+@RequestMapping("${businessName}")
+public class ${ClassName}Controller extends BaseController
+{
+	private final String template = "template/${functionName}导入模板.xlsx";
+	
+	@Autowired
+	private I${ClassName}Service ${className}Service;
+
+#foreach($column in $columns)
+#if($column.dataSource == "dict")
+	@Autowired
+	private ISysDictDataService iSysDictDataService;
+#break;
+#end
+#end
+
+	@Autowired
+	private ISysFileService iSysFileService;
+
+	/**
+	 * 查询${functionName}
+	 */
+	@GetMapping("get/{${pkColumn.javaField}}")
+	public ${ClassName} get(@PathVariable("${pkColumn.javaField}") ${pkColumn.javaType} ${pkColumn.javaField})
+	{
+		return ${className}Service.select${ClassName}ById(${pkColumn.javaField});
+	}
+	
+	/**
+	 * 查询${functionName}列表
+	 */
+	@GetMapping("list")
+	public R list(${ClassName} ${className})
+	{
+		startPage();
+        return result(${className}Service.select${ClassName}List(${className}));
+	}
+	
+	
+	/**
+	 * 新增保存${functionName}
+	 */
+	@PostMapping("save")
+	public R addSave(@RequestBody ${ClassName} ${className})
+	{
+		if (!${className}Service.checkConstrain(${className})) {
+			return R.error("填入的内容已存在相同的数据");
+		}
+		${className}.setCreateByUserName(getUserName());
+		${className}.setCreateBy(getCurrentUserIdString());
+		${className}.setUpdateByUserName(getUserName());
+		${className}.setUpdateBy(getCurrentUserIdString());
+		${className}.setCreateTime(new Date());
+		${className}.setUpdateTime(new Date());
+		return toAjax(${className}Service.insert${ClassName}(${className}));
+	}
+
+	/**
+	 * 修改保存${functionName}
+	 */
+	@PostMapping("update")
+	public R editSave(@RequestBody ${ClassName} ${className})
+	{
+		${className}.setUpdateByUserName(getUserName());
+		${className}.setUpdateBy(getCurrentUserIdString());
+		${className}.setUpdateTime(new Date());
+		return toAjax(${className}Service.update${ClassName}ForForm(${className}));
+	}
+	
+	/**
+	 * 删除${functionName}
+	 */
+	@PostMapping("remove")
+	public R remove(String ids)
+	{		
+		return toAjax(${className}Service.delete${ClassName}ByIds(ids));
+	}
+
+
+	/**
+	 * 批量导出${functionName}
+	 */
+	@PostMapping("/export")
+	public R export(${ClassName} ${className}) {
+		List<${ClassName}> list = ${className}Service.select${ClassName}List(${className});
+		ExcelUtil<${ClassName}> util = new ExcelUtil<${ClassName}>(${ClassName}.class, new String[]{}, new String[]{"errMsg"});
+#if($hasDict == "1")
+		String[] dictTypes = {##
+#foreach($column in $columns)
+#if($column.dataSource == "dict")
+"${column.dictType}",##
+#end
+###if($velocityCount != $columns.size())
+##,##
+###end
+#end
+};
+		Map<String, Map<String, String>> dictDatasMap = iSysDictDataService.getDictDatasMap(dictTypes);
+		return util.exportExcel(list, dictDatasMap, "${functionName}导出");
+#else
+		return util.exportExcel(list, "${functionName}导出");
+#end
+	}
+
+	/**
+	 * 批量导入${functionName}
+	 */
+	@PostMapping("import")
+	public R batchImport(HttpServletRequest request)  throws Throwable{
+		R r = null;
+		File file = null;
+		ExcelUtil excelPlusUtil = new ExcelUtil<>();
+		try {
+			file = excelPlusUtil.copyDirToTempDir(request);
+			if (file == null) {
+				return R.error("选择文件夹为空");
+			}
+			File mainExcel = excelPlusUtil.getMainExcelNoDel(file);
+			if (mainExcel == null) {
+				return R.error("未找到Excel文件");
+			}
+			List<List<String>> list = excelPlusUtil.importExcel(new FileInputStream(mainExcel));
+			if (list.size() < 2) {
+				return R.error("Excel文件无数据");
+			}
+			// 获取模板数据
+			List<String> head = iSysFileService.readExcelTemplate(template);
+			// 表格标题头验证
+			if (!excelPlusUtil.headCompare(list.get(0), head)) {
+				return R.error("导入Excel文件与模板不一致");
+			}
+			List<${ClassName}> okList = new ArrayList<${ClassName}>();
+			ArrayList<List<String>> errList = new ArrayList<>();
+			// 数据验证
+			Map<String, Map<String, String>> validMap = new HashMap<String, Map<String, String>>();
+#if($hasDict == "1")
+#foreach($column in $columns)
+#if($column.dataSource == "dict")
+			validMap.put("${column.dictType}", iSysDictDataService.getLabelToValue("${column.dictType}"));
+#end
+#end
+#end
+			// 唯一性约束
+			Map<String, String> onlyMap = new HashMap<>();
+			for (int i = 1; i < list.size(); i++) {
+				List<String> row = list.get(i);
+				String validResult = importRowValid(row, validMap,onlyMap);
+				if (validResult == null) {
+					${ClassName} entity = (${ClassName}) excelPlusUtil.rowToEntity(row, ${ClassName}.class, head);
+					// @@ 添加附加处理逻辑 例如：关联表更新，状态变化
+##					entity.setInspectionProductType(inspectionProductType.get(entity.getInspectionProductType()));
+					entity.setCreateTime(new Date());
+					entity.setUpdateTime(new Date());
+					entity.setCreateBy(getCurrentUserIdString());
+					entity.setUpdateBy(getCurrentUserIdString());
+					entity.setCreateByUserName(getUserName());
+					entity.setUpdateByUserName(getUserName());
+					okList.add(entity);
+				} else {
+					row.add(validResult);
+					errList.add(row);
+				}
+			}
+			if (okList.size() > 0) {
+					${className}Service.insert${ClassName}List(okList);
+			}
+			r = new R().ok();
+			// 整合错误信息存入redis,并设定2分钟过期，无下载自动过期（解决错误文件变为垃圾的问题）
+			if (errList.size() > 0) {
+				List<String> first = list.get(0);
+				first.add("错误信息");
+				errList.add(0, first);
+				String errKey = UUID.randomUUID().toString();
+				redisUtils.set("import-error-" + errKey, errList, 60 * 2);
+				// 返回信息
+				r.put("errRowCount", errList.size()-1);
+				r.put("errKey", errKey);
+			} else {
+				r.put("errRowCount", 0);
+			}
+			r.put("successCount", okList.size());
+		} catch (Exception e) {
+			e.printStackTrace();
+			logger.error("[数据导入异常:{}]",e.getMessage());
+		} finally {
+			if (file != null) {
+				FileUtil.del(file);
+			}
+		}
+		return r;
+	}
+
+	private String importRowValid(List<String> row, Map<String, Map<String, String>> pro, Map<String, String> onlyMap) {
+		// @@ 添加表格行元数据校验
+         /* 导入数据验证
+         1、是否必填、内容长度、数据格式
+         2、是否字典表、外表存在
+         3、多个相关字段逻辑验证
+         by snaker 2020/12/31 13:09 */
+		// 唯一性约束
+##		String only = row.get(0)+ row.get(1);
+##		if (onlyMap.containsKey(only)) {
+##			return "表格中存在检测项目和检测产品类型相同的行";
+##		}else{
+##			onlyMap.put(row.get(0)+row.get(1),row.get(0));
+##		}
+###set($cnt=0)
+###set($mess="")
+###foreach($column in $columns)
+##	#if($column.isImport == "1")
+##		#if ($column.isUnique == "1")
+##			#set($mess=$mess+$column.columnComment+",")
+##			#set($AttrName=$column.javaField.substring(0,1).toUpperCase() + ${column.javaField.substring(1)})
+##			entity.set${AttrName}(row.get($cnt))
+##		#end
+##	#end
+##	#set($cnt=$cnt+1)
+###end
+		//必填项验证
+#set($cnt=0)
+#foreach($column in $columns)
+#if($column.isImport == "1")
+#if( $column.isRequired == "1")
+		if (StringUtils.isEmpty(row.get($cnt))) {
+			return "${column.columnComment}为必填项，不能为空";
+		}
+#end
+#set($cnt=$cnt+1)
+#end
+#end
+		//验证字段类型和长度
+#set($cnt=0)
+#foreach($column in $columns)
+#if($column.isImport == "1")
+#if( $column.javaType == "String")
+		if (row.get($cnt).length() > ${column.columnLength} ) {
+			return "${column.columnComment}内容长度超出${column.columnLength}";
+		}
+#elseif($column.javaType == "Long" || $column.javaType == "Float" || $column.javaType == "Double" )
+		if (StringUtils.isNotEmpty(row.get($cnt)) && !isNumeric(row.get($cnt))) {
+			return "${column.columnComment}内容请填入数值";
+		}
+#end
+#set($cnt=$cnt+1)
+#end
+#end
+		//验证数据字典、键值组合
+#set($cnt=0)
+#foreach($column in $columns)
+#if($column.isImport == "1")
+#if( $column.dataSource == "dict")
+		if (!pro.get("${column.dictType}").containsKey(row.get(${cnt}))) {
+			return "${column.columnComment}不存在，请核对";
+		}
+#elseif($column.dataSource == "map")
+		String[] ${column.javaField}Array = {"有效", "无效"};
+		if (!Arrays.asList(${column.javaField}Array).contains(row.get($cnt))) {
+			return "${column.columnComment}不存在，请核对";
+		}
+#end
+#set($cnt=$cnt+1)
+#end
+#end
+
+		//@@数据唯一性验证
+		${ClassName} entity = new ${ClassName}();
+#set($cnt=0)
+#set($mess="")
+#foreach($column in $columns)
+#if($column.isImport == "1")
+#if ($column.isUnique == "1")
+#set($mess=$mess+$column.columnComment+",")
+#set($AttrName=$column.javaField.substring(0,1).toUpperCase() + ${column.javaField.substring(1)})
+		entity.set${AttrName}(row.get($cnt));
+#end
+#end
+#set($cnt=$cnt+1)
+#end
+		if (!${className}Service.checkConstrain(entity)) {
+			return "系统中已经存在${mess}相同的数据}，请勿重复导入";
+		}
+		//IstInspectionItems entity= new IstInspectionItems();
+		//entity.setItemName(row.get(0));
+		//entity.setInspectionProductType(pro.get("inspection_product_type").get(row.get(1)));
+		//if (!istInspectionItemsService.checkConstrain(entity)) {
+		//	return "已经存在检测项目和检测产品类型相同的数据，请勿重复导入";
+		//}
+		return null;
+	}
+}

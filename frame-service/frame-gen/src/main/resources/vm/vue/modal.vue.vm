@@ -1,0 +1,311 @@
+<template>
+  <a-modal :width="800" :maskClosable="false" v-model="visible" :confirmLoading="confirmLoading" @ok="handleSubmit">
+    <div slot="title">{{title}}</div>
+    <a-form :form="form">
+      <a-form-item style="display:none">
+        <a-input v-decorator="['${pkColumn.javaField}']"/>
+      </a-form-item>
+      <div class="content">
+          <table class="tb_normal">
+            <tbody>
+              <tr>
+#set($cnt=0)
+#foreach($column in $columns)
+#if(!$column.pk)
+#set($parentheseIndex=$column.columnComment.indexOf("（"))
+#if($parentheseIndex != -1)
+#set($comment=$column.columnComment.substring(0, $parentheseIndex))
+#else
+#set($comment=$column.columnComment)
+#end
+#set($field=$column.javaField)
+#set($dictType=$column.dictType)
+#if($column.isInsert == "1" || $column.isEdit == "1")
+#if(${cnt} > 0 && ${cnt} % 2  == 0)
+            </tr>
+            <tr>
+#end
+#if($column.htmlType == "input")
+                <td class="td_normal_title">
+                    ${comment}:
+                </td>
+                <td class="td_normal_content">
+                    <a-form-item >
+#if($column.javaType == "integer" || $column.javaType == "Long" || $column.javaType == "Double" || $column.javaType == "Float")
+                        <a-input-number placeholder="请输入${comment}" v-decorator="['${field}',${field}Rules]" #if($column.isUnique == "1"):disabled="!isAdd"#end/>
+#else
+                        <a-input placeholder="请输入${comment}" v-decorator="['${field}',${field}Rules]" #if($column.isUnique == "1"):disabled="!isAdd"#end/>
+#end
+                    </a-form-item>
+                </td>
+#elseif($column.htmlType == "textarea")
+                <td class="td_normal_title">
+                    ${comment}:
+                </td>
+                <td class="td_normal_content">
+                <a-form-item>
+                    <a-textarea placeholder="请输入${comment}" v-decorator="['${field}',${field}Rules]" #if($column.isUnique == "1"):disabled="!isAdd"#end/>
+                </a-form-item>
+                </td>
+#elseif($column.htmlType == "select")
+                <td class="td_normal_title">
+                    ${comment}:
+                </td>
+                <td class="td_normal_content">
+                <a-form-item>
+                    <a-select placeholder="请选择${comment}" v-decorator="['${field}',${field}Rules]" #if($column.isUnique == "1"):disabled="!isAdd"#end>
+                        <a-select-option v-for="(item,index) in shareData['${column.columnName}_array']" :key="index" :value="item.dictValue">
+                            {{ item.dictLabel }}
+                        </a-select-option>
+                    </a-select>
+                </a-form-item>
+                </td>
+#elseif($column.htmlType == "datetime")
+                <td class="td_normal_title">
+                    ${comment}:
+                </td>
+                <td class="td_normal_content">
+                <a-form-item>
+                    <a-date-picker v-decorator="['${field}',${field}Rules]" #if($column.isUnique == "1"):disabled="!isAdd"#end/>
+                </a-form-item>
+                </td>
+#else
+                <td class="td_normal_title">
+                    ${comment}:
+                </td>
+                <td class="td_normal_content">
+                <a-form-item>
+                    <a-input placeholder="请输入${comment}" v-decorator="['${field}',${field}Rules]" #if($column.isUnique == "1"):disabled="!isAdd"#end/>
+                </a-form-item>
+                </td>
+#end
+#set($cnt=$cnt+1)
+#end
+#end
+#end
+          <!--<a-col :span="10"></a-col>-->
+              </tr>
+            </tbody>
+          </table>
+         </div>
+        </a-form>
+       <div v-show="loadingmask" class="loading-mask">
+          <a-spin size="large" />
+      </div>
+      <!--自定义页底-->
+      <template slot="footer">
+          <div>
+              <a-popconfirm placement="top" @confirm="handleSubmit">
+                  <template slot="title">
+                      <p>确定保存已填入内容吗？</p>
+                  </template>
+                  <a-button key="submit" type="primary">
+                      保存
+                  </a-button>
+              </a-popconfirm>
+              <a-button key="concel" @click="()=>{this.visible = false}">
+                  取消
+              </a-button>
+          </div>
+    </template>
+  </a-modal>
+</template>
+<script>
+import { save${ClassName} } from '@/api/${moduleName}/${className}'
+import pick from 'lodash.pick'
+export default {
+  name: '${ClassName}Modal',
+  props: {
+      shareData: { type: Object, default: () => { } }
+  },
+  components: {
+  },
+  data () {
+    return {
+      title: '添加/修改${functionName}',
+      visible: false,
+      labelCol: {
+        xs: { span: 24 },
+        sm: { span: 12 }
+      },
+      wrapperCol: {
+        xs: { span: 24 },
+        sm: { span: 12 }
+      },
+      loadingmask:false,
+      confirmLoading: false,
+      mdl: {},
+#foreach($column in $columns)
+#if($column.isInsert == "1" || $column.isEdit == "1")
+#if($column.htmlType == "input")
+      ${column.javaField}Rules:{ rules: [##
+#if($column.isRequired == "1")
+{ required: true, message: '${column.columnComment}为必填项' },##
+#end
+#if($column.columnLength > 0)
+{ max: $column.columnLength, message: '请输入小于${column.columnLength}字的内容' }##
+#end
+]},
+#else
+      ${column.javaField}Rules:{ rules: [##
+#if($column.isRequired == "1")
+{ required: true, message: '${column.columnComment}为必填项' ]}##
+#end
+]},
+#end
+#end
+#end
+      form: this.$form.createForm(this),
+      isAdd: false
+    }
+  },
+  beforeCreate () {
+  },
+  created () {
+  },
+  methods: {
+    add () {
+      this.form.resetFields()
+      this.edit({ ${pkColumn.javaField}: '0' })
+    },
+    edit (record) {
+      this.isAdd = record.id === '0'
+      this.mdl = Object.assign(record)
+      this.visible = true
+      this.$nextTick(() => {
+        this.form.setFieldsValue(pick(this.mdl, #foreach($column in $columns)#if($column.isInsert == "1" || $column.isEdit == "1")#if($foreach.hasNext)'${column.javaField}', #else'${column.javaField}'#end#end#end))
+      })
+    },
+#set($foo="$")
+    handleSubmit (e) {
+      e.preventDefault()
+      this.form.validateFields((err, values) => {
+        if (!err) {
+          console.log('Received values of form: ', values)
+          // 编辑状态下
+          // 以列表原有全部字段数据为基础，补充追加表单中的字段数据，
+          // 表单中存在的字段按照表单中的值，不存在的字段，保持列表中的值
+          // 解决表单数据无法置空非空字段的BUG
+          if (!this.isAdd) {
+              Object.keys(values).forEach(key => {
+                  this.mdl[key] = values[key]
+              })
+          } else {
+              this.mdl = values
+          }
+          this.confirmLoading = true
+          save${ClassName}(this.mdl).then(res => {
+            if (res.code === 0) {
+              this.${foo}message.success('保存成功')
+              this.$emit('ok')
+              this.visible = false
+            } else {
+              this.${foo}message.error(res.msg)
+            }
+          }).catch(() => {
+            this.$message.error('系统错误，请稍后再试')
+          }).finally(() => {
+            this.confirmLoading = false
+          })
+        }
+      })
+    }
+  }
+}
+</script>
+<style lang="less" scoped>
+.loading-mask {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 100%;
+    background: #ffffff96;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+// 数值输入框 宽度调整为100%
+.ant-advanced-search-form {
+/deep/ .ant-input-number {
+    width: 100%;
+}
+}
+.content {
+    margin-bottom: 20px;
+}
+.tb_normal {
+    width: 100%;
+    display: table;
+    background-color: #ffffff;
+    border-collapse: collapse;
+    border: 1px #d2d2d2 solid;
+// padding: 8px !important;
+    text-align: left;
+    margin: 0 auto;
+}
+.tb_normal > thead > tr > td {
+    vertical-align: middle;
+    padding: 6px;
+    word-break: break-word;
+    border: 1px solid #d2d2d2;
+}
+.tb_normal > tbody > tr {
+    border-bottom: 1px solid #d2d2d2;
+    border-top: 1px solid #d2d2d2;
+}
+.tb_normal > tbody > tr > td {
+    vertical-align: middle;
+    padding: 6px;
+    word-break: break-word;
+    border: 1px solid #d2d2d2;
+}
+.td_normal_title {
+    width: 20%;
+    text-align: right;
+    background-color: #f6f6f6;
+}
+.td_normal_content {
+    width: 30%;
+    text-align: left;
+.ant-form-item {
+    margin-bottom: 0px;
+}
+}
+.td_hist_content {
+    width: 25%;
+    text-align: left;
+}
+.hist-label {
+    margin-bottom: 12px;
+}
+.td_change_content {
+    width: 33%;
+    text-align: left;
+}
+.change-label {
+    margin-bottom: 12px;
+    font-weight: bold;
+    font-size: 16px;
+    padding-bottom: 5px;
+    border-bottom: 1px solid #dcd3d3;
+}
+.button-wrapper {
+    margin: 10px 0px;
+.message {
+    font-size: 12px;
+    color: red;
+    margin-left: 4px;
+}
+}
+.question {
+    color: red;
+p {
+    margin-bottom: 0px;
+}
+}
+</style>
